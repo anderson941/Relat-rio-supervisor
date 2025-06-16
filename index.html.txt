@@ -1,0 +1,171 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Relatório Diário com Compartilhamento</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      max-width: 600px;
+      margin: 20px auto;
+      padding: 20px;
+      background-color: #f4f4f4;
+    }
+    .form-container {
+      background-color: #fff;
+      padding: 20px;
+      border-radius: 8px;
+      box-shadow: 0 0 10px rgba(0,0,0,0.1);
+    }
+    label {
+      display: block;
+      margin-bottom: 5px;
+      font-weight: bold;
+    }
+    input, select, textarea {
+      width: 100%;
+      padding: 8px;
+      margin-bottom: 15px;
+      border: 1px solid #ccc;
+      border-radius: 4px;
+      box-sizing: border-box;
+    }
+    textarea {
+      resize: none;
+      overflow: hidden;
+    }
+    button {
+      background-color: #007bff;
+      color: white;
+      padding: 10px 20px;
+      margin-top: 10px;
+      border: none;
+      border-radius: 4px;
+      cursor: pointer;
+      font-size: 16px;
+    }
+    button:hover {
+      background-color: #0056b3;
+    }
+    .foto-gallery {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+      margin-bottom: 15px;
+    }
+    .foto-preview {
+      max-width: 150px;
+      max-height: 150px;
+      border: 1px solid #ccc;
+      border-radius: 4px;
+      object-fit: cover;
+    }
+  </style>
+</head>
+<body>
+  <div id="form-container" class="form-container">
+    <h2>Relatório Diário Operador</h2>
+    <div>
+      <label for="nome">Nome:</label>
+      <input type="text" id="nome" name="nome" required />
+    </div>
+    <div>
+      <label for="data">Data:</label>
+      <input type="date" id="data" name="data" required />
+    </div>
+    <div>
+      <label for="turno">Turno:</label>
+      <select id="turno" name="turno" required>
+        <option value="" disabled selected>Selecione o turno</option>
+        <option value="8h x 20h">8h x 20h</option>
+        <option value="11h x 23h">11h x 23h</option>
+        <option value="13h às 1h">13h às 1h</option>
+        <option value="Intermitente">Intermitente</option>
+      </select>
+    </div>
+    <div>
+      <label for="info-dia">Informações do Dia:</label>
+      <textarea id="info-dia" name="info-dia" placeholder="Descreva as informações do dia" required></textarea>
+    </div>
+    <div>
+      <label for="foto">Fotos:</label>
+      <input type="file" id="foto" name="foto" accept="image/*" multiple />
+      <div id="foto-gallery" class="foto-gallery"></div>
+    </div>
+    <button onclick="shareAll()">Enviar Relatório</button>
+  </div>
+
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+  <script>
+    // Visualização das imagens em miniatura
+    const fotoInput = document.getElementById('foto');
+    const fotoGallery = document.getElementById('foto-gallery');
+
+    fotoInput.addEventListener('change', function(event) {
+      fotoGallery.innerHTML = '';
+      const files = event.target.files;
+      Array.from(files).forEach(file => {
+        const reader = new FileReader();
+        reader.onload = function(e) {
+          const img = document.createElement('img');
+          img.src = e.target.result;
+          img.className = 'foto-preview';
+          fotoGallery.appendChild(img);
+        };
+        reader.readAsDataURL(file);
+      });
+    });
+
+    // Autoexpansão do textarea
+    const infoDia = document.getElementById('info-dia');
+    infoDia.addEventListener('input', function () {
+      this.style.height = 'auto';
+      this.style.height = this.scrollHeight + 'px';
+    });
+
+    // Função para gerar print e compartilhar arquivos
+    function shareAll() {
+      const original = document.getElementById('form-container');
+      const clone = original.cloneNode(true);
+
+      // Remove galeria e input de fotos do clone
+      const gallery = clone.querySelector('.foto-gallery');
+      if (gallery) gallery.remove();
+      const inputFoto = clone.querySelector('#foto');
+      if (inputFoto) inputFoto.remove();
+
+      // Esconde o clone temporariamente no DOM
+      clone.style.position = 'absolute';
+      clone.style.left = '-9999px';
+      document.body.appendChild(clone);
+
+      html2canvas(clone, { useCORS: true }).then(canvas => {
+        document.body.removeChild(clone);
+
+        canvas.toBlob(blob => {
+          const relatorio = new File([blob], 'relatorio.png', { type: 'image/png' });
+          const fotos = Array.from(document.getElementById('foto').files);
+          const arquivos = [relatorio, ...fotos];
+
+          if (navigator.canShare && navigator.canShare({ files: arquivos })) {
+            navigator.share({
+              title: 'Relatório Diário',
+              text: 'Veja o relatório e as fotos anexadas.',
+              files: arquivos
+            }).catch(err => {
+              console.error('Erro no compartilhamento:', err);
+              alert('Compartilhamento cancelado ou não disponível.');
+            });
+          } else {
+            alert('Seu navegador não suporta compartilhamento de arquivos.');
+          }
+        });
+      }).catch(err => {
+        console.error('Erro ao gerar print:', err);
+        alert('Não foi possível capturar o relatório.');
+      });
+    }
+  </script>
+</body>
+</html>
